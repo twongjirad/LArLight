@@ -187,9 +187,10 @@ namespace larlight {
 
     bool status = true;
 
+    if(_verbosity[MSG::INFO]) Message::send( MSG::INFO,__FUNCTION__, "algo_tpc_xmit" );
     // Check if _checksum and _nwords agrees with that of event header.
-    //if(_nwords != _header_info.nwords) {
-    _nwords-=1;
+    // Yun-Tse 2014/11/19: Perhaps this _nwords-=1; was for some old data format?
+    // _nwords-=1;
     if(_nwords!=_header_info.nwords){
 
       Message::send(MSG::ERROR,__FUNCTION__,
@@ -199,14 +200,11 @@ namespace larlight {
 
     }
 
-    //if(_checksum != _header_info.checksum) {
+    //if(_checksum != _header_info.checksum)
     if((_checksum & 0xffffff) !=_header_info.checksum){
-
-      Message::send(MSG::ERROR,__FUNCTION__,
-		    Form("Disagreement on checksum: summed=%x, expected=%x",_checksum,_header_info.checksum));
-
-      status = false;
-
+	Message::send(MSG::ERROR,__FUNCTION__,
+		      Form("Disagreement on checksum: summed=%x, expected=%x",_checksum,_header_info.checksum));
+	status = false;
     }
 
     return status;
@@ -301,18 +299,18 @@ namespace larlight {
 
     // Store if condition is satisfied
     if(status) {
-
+      
       if(_verbosity[MSG::INFO]){
 
-	Message::send(MSG::INFO,__FUNCTION__,
-		      Form("Storing event %u with %zu channel entries...",
-			   _event_data->event_number(), _event_data->size()));
+	print(MSG::INFO,__FUNCTION__,
+	      Form("Storing event %u with %zu channel entries...",
+		   _header_info.event_number, _event_data->size()));
 
       }
-
+      
       _event_data->set_module_address         ( _header_info.module_address         );
       _event_data->set_module_id              ( _header_info.module_id              );
-      _event_data->set_event_number           ( _header_info.event_number-1         );
+      _event_data->set_event_number           ( _header_info.event_number           );
       _event_data->set_event_frame_number     ( _header_info.event_frame_number     );
       _event_data->set_fem_trig_frame_number  ( _header_info.fem_trig_frame_number  );
       _event_data->set_fem_trig_sample_number ( _header_info.fem_trig_sample_number );
@@ -360,7 +358,7 @@ namespace larlight {
     else{
 
       // Compresed data is in last 15 bit of this word.
-      UInt_t data = (word & 0x7fff);
+      UInt_t data = (word & 0x3fff);
 
       // The compression is based on an extremely simple Huffman encoding.
       // The Huffman tree used here assigns the following values:
@@ -418,27 +416,24 @@ namespace larlight {
 
       size_t zero_count = 0;
       bool   non_zero_found = false;
-      for(size_t index=0; index<15 && status; ++index){
+      for(short index=13; index>=0 && status; --index){
 
 	if( !((data >> index) & 0x1) )
 
-	  zero_count += ( non_zero_found ? 1 : 0 );
+	  zero_count += 1;
 
-	else{
+	else {
 
-	  if(!non_zero_found) non_zero_found=true;
-
-	  else status = add_huffman_adc(_ch_data,zero_count);
-
-	  if(status) zero_count=0;
+	  status = add_huffman_adc(_ch_data,zero_count);
+	  
+	  zero_count = 0;
+	  if(!status) {
+	    Message::send(MSG::ERROR,__FUNCTION__,
+			  Form("Error in decoding huffman data word: 0x%x",data));
+	    break;
+	  }
 	}
       }
-
-      if(zero_count && status){
-
-	status = add_huffman_adc(_ch_data,zero_count);
-
-      }    
 
       if(!status)
 

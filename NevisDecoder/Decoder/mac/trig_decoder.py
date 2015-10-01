@@ -35,16 +35,16 @@ from ROOT import larlight as fmwk
 #
 out_dir = "./"
 fpath   = argv[1]
-fname   = fpath.split('/')[len(fpath.split('/'))-1]
-outname = out_dir + fname[0:fname.rfind('.')] + ".root"
+#fname   = fpath.split('/')[len(fpath.split('/'))-1]
+#outname = out_dir + fname[0:fname.rfind('.')] + ".root"
+outname = fpath.replace('.dat','.root')
 
 # Decoder algorithm instance ... currently xmit, slow, or trigger
 #algo=fmwk.algo_pmt_xmit()
-# algo=fmwk.algo_slow_readout_decoder()
+#algo=fmwk.algo_slow_readout_decoder()
 #algo=fmwk.algo_tpc_xmit()
-#algo=fmwk.algo_trig_decoder()
+algo=fmwk.algo_trig_decoder()
 #algo=fmwk.algo_tpc_huffman()
-algo=fmwk.algo_sn_tpc_huffman()
 
 # Set algorithm's back-trace mode with positive int argument (=# words to be backtraced)
 algo.set_backtrace_mode(200)
@@ -56,7 +56,7 @@ decoder=fmwk.decoder_manager()
 decoder.set_decoder(algo);
 
 # Set input file format ... ASCII or BINARY
-# decoder.set_format(fmwk.FORMAT.ASCII)
+#decoder.set_format(fmwk.FORMAT.ASCII)
 decoder.set_format(fmwk.FORMAT.BINARY)
 
 # Set whether or not to ready by block 
@@ -87,15 +87,15 @@ decoder.set_output_filename(outname)
 # missing event words or conflicting encoding algorithm, and continue
 # in the decoding event loop. When turned off, the program exits as
 # soon as it encounters any issue.
-decoder.debug_mode(False)
-# decoder.debug_mode(True)
+#decoder.debug_mode(False)
+decoder.debug_mode(True)
 
 # Finish configuration. Now run it.
-decoder.run()
+status = decoder.run()
 
 # Reset properly before exits.
 decoder.reset()
 
-
-    
+print status
+print    
 
